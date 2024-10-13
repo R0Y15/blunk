@@ -1,42 +1,44 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { SignedIn, SignedOut, SignInButton, SignOutButton, useSession } from "@clerk/nextjs";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { FileCard, UploadButton } from '@/components'
+import { useQuery } from 'convex/react';
+import React from 'react'
+import { api } from '../../convex/_generated/api';
+import { useOrganization, useUser } from '@clerk/nextjs';
 
-export default function Home() {
-  const createFile = useMutation(api.files.createFile);
-  const files = useQuery(api.files.getFile);
+const Home = () => {
+  const Organization = useOrganization();
+  const user = useUser();
+
+  let orgId: string | undefined = undefined;
+  if (Organization.isLoaded && user.user?.id) {
+    orgId = Organization.organization?.id ?? user.user?.id;
+  }
+
+  // const files = useQuery(api.files.getFile, orgId ? { orgId } : "skip");
+  const files = [1, 2, 3]
 
   return (
-    <div>
-      <SignedIn>
-        <SignOutButton>
-          <Button>
-            Sign Out
-          </Button>
-        </SignOutButton>
-      </SignedIn>
-      <SignedOut>
-        <SignInButton mode="modal">
-          <Button>
-            Sign In
-          </Button>
-        </SignInButton>
-      </SignedOut>
+    <div className="container mx-auto pt-12">
+      <div className="flex justify-between items-center">
+        <h1 className="text-4xl font-bold mb-8">Upload File</h1>
+        <UploadButton />
 
-      <Button onClick={() => createFile({ name: "Hello World" })}>
-        Create File
-      </Button>
 
-      {files?.map((file, idx) => {
-        return (
-          <div key={idx}>
-            {file.name}
-          </div>
-        )
-      })}
+        {/* {files?.map((file) => (
+          <div key={file._id}>{file.name}</div>
+          ))} */}
+      </div>
+
+      <div className="grid grid-cols-4 gap-4">
+        <FileCard file={files} />
+        <FileCard file={files} />
+        <FileCard file={files} />
+        <FileCard file={files} />
+        <FileCard file={files} />
+      </div>
     </div>
-  );
+  )
 }
+
+export default Home
