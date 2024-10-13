@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react'
+import React, { ReactNode, useState } from 'react'
 import {
     Card,
     CardContent,
@@ -9,7 +9,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { Doc } from '../../convex/_generated/dataModel'
+import { Doc, Id } from '../../convex/_generated/dataModel'
 import { Button } from './ui/button'
 
 import {
@@ -20,7 +20,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { MoreVerticalIcon, TrashIcon } from 'lucide-react'
+import { FileTextIcon, GanttChartIcon, ImageIcon, MoreVerticalIcon, TrashIcon } from 'lucide-react'
 
 import {
     AlertDialog,
@@ -36,6 +36,7 @@ import {
 import { api } from '../../convex/_generated/api';
 import { useMutation } from 'convex/react';
 import { useToast } from '@/hooks/use-toast';
+import Image from 'next/image';
 
 
 function FileCardActions({ file }: { file: Doc<"files"> }) {
@@ -89,11 +90,23 @@ function FileCardActions({ file }: { file: Doc<"files"> }) {
     )
 }
 
+function getFileUrl(fileId: Id<"_storage">): string {
+    return `${process.env.NEXT_PUBLIC_CONVEX_URL}/api/storage/${fileId}`;
+    // https://decisive-trout-680.convex.cloud/api/storage/a1ada88f-f689-4cd6-b43c-5e7988306a2a
+}
+
 const FileCard = ({ file }: { file: Doc<"files"> }) => {
+    const typeIcons = {
+        image: <ImageIcon />,
+        pdf: <FileTextIcon />,
+        csv: <GanttChartIcon />,
+    } as Record<Doc<"files">["type"], ReactNode>;
+
     return (
         <Card>
             <CardHeader className='relative'>
-                <CardTitle>
+                <CardTitle className='flex gap-2'>
+                    <div className='flex justify-center'>{typeIcons[file.type]} {file.type}</div>
                     {file.name}
                 </CardTitle>
                 <div className="absolute top-2 right-2">
@@ -101,11 +114,25 @@ const FileCard = ({ file }: { file: Doc<"files"> }) => {
                 </div>
                 {/* <CardDescription>Card Description</CardDescription> */}
             </CardHeader>
-            <CardContent>
-                <p>Card Content</p>
+            <CardContent className='h-[200px] flex justify-center items-center'>
+                {file.type === "image" && (
+                    <Image
+                        src={file.fileId}
+                    alt={file.name}
+                    width={200}
+                    height={100}
+                />
+                )}
+
+                {file.type === "csv" && <GanttChartIcon className='w-20 h-20' />}
+                {file.type === "pdf" && <FileTextIcon className='w-20 h-20' />}
             </CardContent>
-            <CardFooter>
-                <Button>Download</Button>
+            <CardFooter className='flex justify-center'>
+                <Button
+                onClick={() => {
+                    window.open(getFileUrl(file.fileId), "_blank")
+                }}
+                >Download</Button>
             </CardFooter>
         </Card>
     )

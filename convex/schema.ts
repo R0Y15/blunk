@@ -1,12 +1,17 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-export default defineSchema({
-    // Other tables here...
+export const FileTypes = v.union(
+    v.literal("image"),
+    v.literal("pdf"),
+    v.literal("csv")
+)
 
+export default defineSchema({
     files: defineTable({
         name: v.string(),
         fileId: v.id("_storage"),
+        type: FileTypes,
         orgId: v.optional(v.string()),
     }).index(
         "by_orgId",

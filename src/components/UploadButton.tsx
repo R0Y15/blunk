@@ -21,6 +21,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Doc } from "../../convex/_generated/dataModel";
 
 const formSchema = z.object({
     title: z.string().min(1).max(200),
@@ -54,20 +55,27 @@ export function UploadButton() {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         if (!orgId) return;
 
+        const FileType = values.file[0].type;
         const postUrl = await generateUploadUrl();
         const result = await fetch(postUrl, {
             method: "POST",
-            headers: { "Content-Type": values.file[0].type },
+            headers: { "Content-Type": FileType },
             body: values.file[0],
         });
 
         const { storageId } = await result.json();
+        const types = {
+            "image/png": "image",
+            "application/pdf": "pdf",
+            "text/csv": "csv",
+        } as Record<string, Doc<"files">["type"]>;
 
         try {
             await createFile({
                 name: "Hello World",
                 fileId: storageId,
                 orgId,
+                type: types[FileType]
             })
 
             toast({
@@ -95,8 +103,8 @@ export function UploadButton() {
             form.reset();
         }}>
             <DialogTrigger asChild>
-                <Button>
-                    Create File
+                <Button className="font-semibold">
+                    Upload File
                 </Button>
             </DialogTrigger>
             <DialogContent>
