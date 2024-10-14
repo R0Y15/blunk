@@ -120,7 +120,7 @@ export function UploadButton() {
                                 <FormItem>
                                     <FormLabel>Title</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="shadcn" {...field} />
+                                        <Input placeholder="File Name" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

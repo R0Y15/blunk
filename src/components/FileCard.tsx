@@ -20,7 +20,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { FileTextIcon, GanttChartIcon, ImageIcon, MoreVerticalIcon, TrashIcon } from 'lucide-react'
+import { FileTextIcon, GanttChartIcon, ImageIcon, MoreVerticalIcon, StarIcon, TrashIcon } from 'lucide-react'
 
 import {
     AlertDialog,
@@ -42,6 +42,7 @@ import Image from 'next/image';
 function FileCardActions({ file }: { file: Doc<"files"> }) {
 
     const { toast } = useToast();
+    const fav = useMutation(api.files.toggleFav);
     const deleteFile = useMutation(api.files.deleteFile);
     const [isOpen, setIsOpen] = useState(false);
 
@@ -78,6 +79,15 @@ function FileCardActions({ file }: { file: Doc<"files"> }) {
             <DropdownMenu>
                 <DropdownMenuTrigger><MoreVerticalIcon /></DropdownMenuTrigger>
                 <DropdownMenuContent>
+                    <DropdownMenuItem
+                        className='flex gap-1 text-red-600 items-center cursor-pointer'
+                        onClick={() => fav({ fileId: file._id })}
+                    >
+                        <StarIcon className='w-4 h-4' /> Favourite
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
                     <DropdownMenuItem
                         className='flex gap-1 text-red-600 items-center cursor-pointer'
                         onClick={() => setIsOpen(true)}
@@ -118,10 +128,10 @@ const FileCard = ({ file }: { file: Doc<"files"> }) => {
                 {file.type === "image" && (
                     <Image
                         src={file.fileId}
-                    alt={file.name}
-                    width={200}
-                    height={100}
-                />
+                        alt={file.name}
+                        width={200}
+                        height={100}
+                    />
                 )}
 
                 {file.type === "csv" && <GanttChartIcon className='w-20 h-20' />}
@@ -129,9 +139,9 @@ const FileCard = ({ file }: { file: Doc<"files"> }) => {
             </CardContent>
             <CardFooter className='flex justify-center'>
                 <Button
-                onClick={() => {
-                    window.open(getFileUrl(file.fileId), "_blank")
-                }}
+                    onClick={() => {
+                        window.open(getFileUrl(file.fileId), "_blank")
+                    }}
                 >Download</Button>
             </CardFooter>
         </Card>
