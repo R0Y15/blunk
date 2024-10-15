@@ -72,7 +72,7 @@ export function UploadButton() {
 
         try {
             await createFile({
-                name: "Hello World",
+                name: values.title,
                 fileId: storageId,
                 orgId,
                 type: types[FileType]
@@ -149,7 +149,6 @@ export function UploadButton() {
                         >
                             {form.formState.isSubmitting && (
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                // <p>Uploading...</p>
                             )}
                             Submit
                         </Button>

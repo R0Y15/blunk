@@ -18,13 +18,21 @@ export default defineSchema({
         fileId: v.id("_storage"),
         type: FileTypes,
         orgId: v.optional(v.string()),
+        shouldDelete: v.optional(v.boolean()),
+        userId: v.id("users"),
     }).index(
         "by_orgId",
         ["orgId"]
-    ),
+    )
+        .index(
+            "by_shouldDelete",
+            ["shouldDelete"]
+        ),
 
     users: defineTable({
         tokenIdentifier: v.string(),
+        name: v.optional(v.string()),
+        image: v.optional(v.string()),
         orgIds: v.array(v.object({
             orgId: v.string(),
             role: roles,

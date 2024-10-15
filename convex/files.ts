@@ -3,19 +3,20 @@ import { mutation, MutationCtx, query, QueryCtx } from "./_generated/server";
 import { FileTypes } from "./schema";
 import { Id } from "./_generated/dataModel";
 
-async function hasAccessToOrg(
+export async function hasAccessToOrg(
     ctx: QueryCtx | MutationCtx,
     orgId: string
 ) {
-    const Identity = await ctx.auth.getUserIdentity();
+    const identity = await ctx.auth.getUserIdentity();
 
-    if (!Identity) {
+    if (!identity) {
         return null;
     }
 
-    const user = await ctx.db.query("users")
-        .withIndex("by_tokenIdentifier", q =>
-            q.eq("tokenIdentifier", Identity.tokenIdentifier)
+    const user = await ctx.db
+        .query("users")
+        .withIndex("by_tokenIdentifier", (q) =>
+            q.eq("tokenIdentifier", identity.tokenIdentifier)
         )
         .first();
 
@@ -23,7 +24,10 @@ async function hasAccessToOrg(
         return null;
     }
 
-    const hasAccess = user.orgIds.some(item => item.orgId === orgId) || user.tokenIdentifier.includes(orgId);
+    const hasAccess =
+        user.orgIds.some((item) => item.orgId === orgId) ||
+        user.tokenIdentifier.includes(orgId);
+
     if (!hasAccess) {
         return null;
     }
@@ -79,6 +83,7 @@ export const createFile = mutation({
             orgId: args.orgId,
             fileId: args.fileId,
             type: args.type,
+            userId: hasAccess.user._id
         });
     }
 });
@@ -87,7 +92,9 @@ export const getFile = query({
     args: {
         orgId: v.string(),
         query: v.optional(v.string()),
-        fav: v.optional(v.boolean())
+        fav: v.optional(v.boolean()),
+        deleteOnly: v.optional(v.boolean()),
+        type: v.optional(FileTypes),
     },
     async handler(ctx, args) {
         const hasAccess = await hasAccessToOrg(ctx, args.orgId);
@@ -106,7 +113,6 @@ export const getFile = query({
         }
 
         if (args.fav) {
-
             const favs = await ctx.db.query("favourites")
                 .withIndex("by_userId_orgId_fileId", q => q
                     .eq("userId", hasAccess.user._id)
@@ -117,7 +123,40 @@ export const getFile = query({
             files = files.filter((file) =>
                 favs.some((fav) => fav.fileId === file._id));
         }
-        return files;
+
+        if (args.deleteOnly) {
+            files = files.filter((file) => file.shouldDelete);
+        } else {
+            files = files.filter((file) => !file.shouldDelete);
+        }
+
+        if (args.type) {
+            files = files.filter((file) => file.type === args.type);
+        }
+
+        const filesWithUrl = await Promise.all(
+            files.map(async (file) => ({
+                ...file,
+                url: await ctx.storage.getUrl(file.fileId),
+            }))
+        );
+
+        return filesWithUrl;
+    }
+})
+
+export const deletePermanently = mutation({
+    args: {},
+    async handler(ctx) {
+        const files = await ctx.db
+            .query("files")
+            .withIndex("by_shouldDelete", q => q.eq("shouldDelete", true))
+            .collect();
+
+        await Promise.all(files.map(async (file) => {
+            await ctx.storage.delete(file.fileId);
+            return await ctx.db.delete(file._id);
+        }))
     }
 })
 
@@ -136,7 +175,30 @@ export const deleteFile = mutation({
             throw new ConvexError("You are not authorized to delete this file");
         }
 
-        await ctx.db.delete(args.fileId);
+        await ctx.db.patch(args.fileId, {
+            shouldDelete: true,
+        })
+    }
+})
+
+export const restoreFile = mutation({
+    args: { fileId: v.id("files") },
+    async handler(ctx, args) {
+        const access = await hasAccessToFile(ctx, args.fileId);
+
+        if (!access) {
+            throw new ConvexError("Unauthorized access to this organization");
+        }
+
+        const isAdmin = access.user.orgIds.find(org => org.orgId === access.file.orgId)?.role === "admin";
+
+        if (!isAdmin) {
+            throw new ConvexError("You are not authorized to delete this file");
+        }
+
+        await ctx.db.patch(args.fileId, {
+            shouldDelete: false,
+        })
     }
 })
 
@@ -170,7 +232,7 @@ export const toggleFav = mutation({
     }
 })
 
-export const getAllFavs = mutation({
+export const getAllFavs = query({
     args: { orgId: v.string() },
     async handler(ctx, args) {
         const hasAccess = await hasAccessToOrg(ctx, args.orgId);

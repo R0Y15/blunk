@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { boolean } from 'zod';
 import { api } from '../../convex/_generated/api';
+import { Doc } from '../../convex/_generated/dataModel';
 
 function Placeholder() {
   return (
@@ -26,23 +27,23 @@ function Placeholder() {
   )
 }
 
-const BrowserContent = ({ title, favouritesOnly }: { title: string, favouritesOnly?: boolean }) => {
+const BrowserContent = ({ title, favouritesOnly, deleteOnly }: { title: string, favouritesOnly?: boolean, deleteOnly?: boolean }) => {
   const Organization = useOrganization();
   const user = useUser();
   const [query, setQueryquery] = useState("");
+  const [type, setType] = useState<Doc<"files">["type"] | "all">("all");
 
   let orgId: string | undefined = undefined;
   if (Organization.isLoaded && user.user?.id) {
     orgId = Organization.organization?.id ?? user.user?.id;
   }
 
-  // const favs = useQuery(api.files.getAllFavs,
-  //   orgId ? { orgId } : "skip"
-  // );
+  const favs = useQuery(api.files.getAllFavs,
+    orgId ? { orgId } : "skip"
+  );
 
-  // const files = useQuery(api.files.getFile,
-  //   orgId ? { orgId, query, fav: favouritesOnly } : "skip");
-  const files = [1, 2, 3];
+  const files = useQuery(api.files.getFile,
+    orgId ? { orgId, query, fav: favouritesOnly, type: type === "all" ? undefined : type, } : "skip");
   const isLoading = files === undefined;
 
   return (
@@ -65,17 +66,11 @@ const BrowserContent = ({ title, favouritesOnly }: { title: string, favouritesOn
 
             {files.length === 0 && (<Placeholder />)}
 
-            {/* <div className="grid grid-cols-3 gap-4"> */}
-            {/* <FileCard file={files} />
-            <FileCard file={files} />
-            <FileCard file={files} />
-            <FileCard file={files} />
-            <FileCard file={files} /> */}
-            {/* {files?.map((file) => (
-              <FileCard key={file._id} favourites={favs ?? []} file={file} />
-            ))} */}
-            {/* </div> */}
-            {/* )} */}
+            <div className="grid grid-cols-3 gap-4">
+              {files?.map((file) => (
+                <FileCard key={file._id} favourites={favs ?? []} file={file} />
+              ))}
+            </div>
           </>
         )}
       </div>

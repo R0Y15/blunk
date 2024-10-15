@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Button } from './ui/button'
 import React from 'react'
-import { FileIcon, StarIcon } from 'lucide-react'
+import { FileIcon, StarIcon, TrashIcon } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 
 const SideNav = () => {
@@ -20,6 +20,12 @@ const SideNav = () => {
             <Link href="/dashboard/favourites">
                 <Button variant={"link"} className={`flex gap-2 ${pathname === "/dashboard/favourites" ? "text-blue-500" : ""}`}>
                     <StarIcon /> Favourites
+                </Button>
+            </Link>
+
+            <Link href="/dashboard/trash">
+                <Button variant={"link"} className={`flex gap-2 ${pathname === "/dashboard/trash" ? "text-blue-500" : ""}`}>
+                    <TrashIcon /> Trash
                 </Button>
             </Link>
         </div>
