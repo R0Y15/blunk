@@ -23,7 +23,7 @@ async function hasAccessToOrg(
         return null;
     }
 
-    const hasAccess = user.orgIds.includes(orgId) || user.tokenIdentifier.includes(orgId);
+    const hasAccess = user.orgIds.some(item => item.orgId === orgId) || user.tokenIdentifier.includes(orgId);
     if (!hasAccess) {
         return null;
     }
@@ -128,6 +128,12 @@ export const deleteFile = mutation({
 
         if (!access) {
             throw new ConvexError("Unauthorized access to this organization");
+        }
+
+        const isAdmin = access.user.orgIds.find(org => org.orgId === access.file.orgId)?.role === "admin";
+
+        if (!isAdmin) {
+            throw new ConvexError("You are not authorized to delete this file");
         }
 
         await ctx.db.delete(args.fileId);

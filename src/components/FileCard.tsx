@@ -37,6 +37,7 @@ import { api } from '../../convex/_generated/api';
 import { useMutation } from 'convex/react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import { Protect } from '@clerk/nextjs';
 
 
 function FileCardActions({ file, isFav }: { file: Doc<"files">, isFav: boolean }) {
@@ -94,14 +95,19 @@ function FileCardActions({ file, isFav }: { file: Doc<"files">, isFav: boolean }
                         )}
                     </DropdownMenuItem>
 
-                    <DropdownMenuSeparator />
-
-                    <DropdownMenuItem
-                        className='flex gap-1 text-red-600 items-center cursor-pointer'
-                        onClick={() => setIsOpen(true)}
+                    <Protect
+                        role='org:admin'
+                        fallback={<></>}
                     >
-                        <TrashIcon className='w-4 h-4' /> Delete
-                    </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+
+                        <DropdownMenuItem
+                            className='flex gap-1 text-red-600 items-center cursor-pointer'
+                            onClick={() => setIsOpen(true)}
+                        >
+                            <TrashIcon className='w-4 h-4' /> Delete
+                        </DropdownMenuItem>
+                    </Protect>
                 </DropdownMenuContent>
             </DropdownMenu >
         </>
