@@ -4,7 +4,7 @@ import React from 'react'
 const page = () => {
   return (
     <div>
-      <BrowserContent title={"Favourites"} favourites />
+      <BrowserContent title={"Favourites"} favouritesOnly />
     </div>
   )
 }

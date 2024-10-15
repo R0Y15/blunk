@@ -20,7 +20,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { FileTextIcon, GanttChartIcon, ImageIcon, MoreVerticalIcon, StarIcon, TrashIcon } from 'lucide-react'
+import { FileTextIcon, GanttChartIcon, ImageIcon, MoreVerticalIcon, StarHalf, StarIcon, TrashIcon } from 'lucide-react'
 
 import {
     AlertDialog,
@@ -39,7 +39,7 @@ import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 
 
-function FileCardActions({ file }: { file: Doc<"files"> }) {
+function FileCardActions({ file, isFav }: { file: Doc<"files">, isFav: boolean }) {
 
     const { toast } = useToast();
     const fav = useMutation(api.files.toggleFav);
@@ -83,7 +83,15 @@ function FileCardActions({ file }: { file: Doc<"files"> }) {
                         className='flex gap-1 text-red-600 items-center cursor-pointer'
                         onClick={() => fav({ fileId: file._id })}
                     >
-                        <StarIcon className='w-4 h-4' /> Favourite
+                        {isFav ? (
+                            <div className='flex gap-1 items-center'>
+                                <StarIcon className='w-4 h-4' /> UnFavourite
+                            </div>
+                        ) : (
+                            <div className='flex gap-1 items-center'>
+                                <StarHalf className='w-4 h-4' /> Favourite
+                            </div>
+                        )}
                     </DropdownMenuItem>
 
                     <DropdownMenuSeparator />
@@ -105,12 +113,14 @@ function getFileUrl(fileId: Id<"_storage">): string {
     // https://decisive-trout-680.convex.cloud/api/storage/a1ada88f-f689-4cd6-b43c-5e7988306a2a
 }
 
-const FileCard = ({ file }: { file: Doc<"files"> }) => {
+const FileCard = ({ file, favourites }: { file: Doc<"files">, favourites: Doc<"favourites">[] }) => {
     const typeIcons = {
         image: <ImageIcon />,
         pdf: <FileTextIcon />,
         csv: <GanttChartIcon />,
     } as Record<Doc<"files">["type"], ReactNode>;
+
+    const isFav = favourites.some((fav) => fav.fileId === file._id);
 
     return (
         <Card>
@@ -120,7 +130,7 @@ const FileCard = ({ file }: { file: Doc<"files"> }) => {
                     {file.name}
                 </CardTitle>
                 <div className="absolute top-2 right-2">
-                    <FileCardActions file={file} />
+                    <FileCardActions isFav={isFav} file={file} />
                 </div>
                 {/* <CardDescription>Card Description</CardDescription> */}
             </CardHeader>

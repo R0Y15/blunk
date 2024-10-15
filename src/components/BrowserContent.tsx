@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { FileIcon, Loader2, StarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { boolean } from 'zod';
 import { api } from '../../convex/_generated/api';
 
 function Placeholder() {
@@ -25,7 +26,7 @@ function Placeholder() {
   )
 }
 
-const BrowserContent = ({ title, favourites }: { title: string, favourites?: boolean }) => {
+const BrowserContent = ({ title, favouritesOnly }: { title: string, favouritesOnly?: boolean }) => {
   const Organization = useOrganization();
   const user = useUser();
   const [query, setQueryquery] = useState("");
@@ -35,7 +36,12 @@ const BrowserContent = ({ title, favourites }: { title: string, favourites?: boo
     orgId = Organization.organization?.id ?? user.user?.id;
   }
 
-  //   const files = useQuery(api.files.getFile, orgId ? {orgId, query, favourites} : "skip");
+  // const favs = useQuery(api.files.getAllFavs,
+  //   orgId ? { orgId } : "skip"
+  // );
+
+  // const files = useQuery(api.files.getFile,
+  //   orgId ? { orgId, query, fav: favouritesOnly } : "skip");
   const files = [1, 2, 3];
   const isLoading = files === undefined;
 
@@ -66,8 +72,8 @@ const BrowserContent = ({ title, favourites }: { title: string, favourites?: boo
             <FileCard file={files} />
             <FileCard file={files} /> */}
             {/* {files?.map((file) => (
-            <FileCard key={file._id} file={file} />
-          ))} */}
+              <FileCard key={file._id} favourites={favs ?? []} file={file} />
+            ))} */}
             {/* </div> */}
             {/* )} */}
           </>
