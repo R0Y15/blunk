@@ -22,7 +22,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { api } from '../../convex/_generated/api';
-import { useMutation } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { useToast } from '@/hooks/use-toast';
 import { Protect } from '@clerk/nextjs';
 
@@ -38,6 +38,7 @@ function FileCardActions({ file, isFav }: { file: Doc<"files">, isFav: boolean }
     const fav = useMutation(api.files.toggleFav);
     const deleteFile = useMutation(api.files.deleteFile);
     const restoreFile = useMutation(api.files.restoreFile);
+    const me = useQuery(api.users.getMe);
     const [isOpen, setIsOpen] = useState(false);
 
     return (
@@ -96,7 +97,11 @@ function FileCardActions({ file, isFav }: { file: Doc<"files">, isFav: boolean }
                     </DropdownMenuItem>
 
                     <Protect
-                        role='org:admin'
+                        condition={(check) => {
+                            return check({
+                                role: "org:admin"
+                            }) || file.userId === me?._id;
+                        }}
                         fallback={<></>}
                     >
                         <DropdownMenuSeparator />

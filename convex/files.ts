@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, MutationCtx, query, QueryCtx } from "./_generated/server";
 import { FileTypes } from "./schema";
-import { Id } from "./_generated/dataModel";
+import { Doc, Id } from "./_generated/dataModel";
 
 export async function hasAccessToOrg(
     ctx: QueryCtx | MutationCtx,
@@ -53,6 +53,17 @@ async function hasAccessToFile(ctx: QueryCtx | MutationCtx, fileId: Id<"files">)
     }
 
     return { user: hasAccess.user, file };
+}
+
+function assertCanDeleteFile(user: Doc<"users">, file: Doc<"files">) {
+    const canDelete =
+        file.userId === user._id ||
+        user.orgIds.find(org => org.orgId === file.orgId)
+            ?.role === "admin";
+
+    if (!canDelete) {
+        throw new ConvexError("You are not authorized to delete this file");
+    }
 }
 
 export const generateUploadUrl = mutation(async (ctx) => {
@@ -169,11 +180,7 @@ export const deleteFile = mutation({
             throw new ConvexError("Unauthorized access to this organization");
         }
 
-        const isAdmin = access.user.orgIds.find(org => org.orgId === access.file.orgId)?.role === "admin";
-
-        if (!isAdmin) {
-            throw new ConvexError("You are not authorized to delete this file");
-        }
+        assertCanDeleteFile(access.user, access.file);
 
         await ctx.db.patch(args.fileId, {
             shouldDelete: true,
@@ -190,11 +197,7 @@ export const restoreFile = mutation({
             throw new ConvexError("Unauthorized access to this organization");
         }
 
-        const isAdmin = access.user.orgIds.find(org => org.orgId === access.file.orgId)?.role === "admin";
-
-        if (!isAdmin) {
-            throw new ConvexError("You are not authorized to delete this file");
-        }
+        assertCanDeleteFile(access.user, access.file);
 
         await ctx.db.patch(args.fileId, {
             shouldDelete: false,

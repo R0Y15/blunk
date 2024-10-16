@@ -11,7 +11,15 @@ import { Doc } from '../../convex/_generated/dataModel';
 import { columns } from './columns';
 import { FileTable } from './FileTable';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Label } from './ui/label';
 
 function Placeholder() {
   return (
@@ -44,7 +52,7 @@ const BrowserContent = ({ title, favouritesOnly, deleteOnly }: { title: string, 
   );
 
   const files = useQuery(api.files.getFile,
-    orgId ? { orgId, query, fav: favouritesOnly, type: type === "all" ? undefined : type, } : "skip");
+    orgId ? { orgId, query, fav: favouritesOnly, deleteOnly, type: type === "all" ? undefined : type } : "skip");
   const isLoading = files === undefined;
 
   const modifiedFiles = files?.map((file) => ({
@@ -64,10 +72,27 @@ const BrowserContent = ({ title, favouritesOnly, deleteOnly }: { title: string, 
         </div>
 
         <Tabs defaultValue="grid">
-          <TabsList className='mb-6'>
-            <TabsTrigger value="grid" className='flex gap-2 items-center'><GridIcon />Grid</TabsTrigger>
-            <TabsTrigger value="table" className='flex gap-2 items-center'><RowsIcon />Table</TabsTrigger>
-          </TabsList>
+          <div className="flex justify-between items-center">
+            <TabsList className='mb-6'>
+              <TabsTrigger value="grid" className='flex gap-2 items-center'><GridIcon />Grid</TabsTrigger>
+              <TabsTrigger value="table" className='flex gap-2 items-center'><RowsIcon />Table</TabsTrigger>
+            </TabsList>
+
+            <div className='flex gap-3 items-center'>
+              <Label htmlFor='type-select'>Filter</Label>
+              <Select value={type} onValueChange={(newType) => { setType(newType as any) }}>
+                <SelectTrigger id='type-select' className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="image">Image</SelectItem>
+                  <SelectItem value="csv">CSV</SelectItem>
+                  <SelectItem value="pdf">PDF</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
           {files === undefined && (
             <div className="flex flex-col w-full items-center gap-8 mt-24">
