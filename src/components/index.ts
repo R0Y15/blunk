@@ -1,5 +1,6 @@
 import BrowserContent from "./BrowserContent";
 import FileCard from "./FileCard";
+import Footer from "./Footer";
 import Navbar from "./Navbar";
 import SearchBar from "./SearchBar";
 import SideNav from "./SideNav";
@@ -12,4 +13,5 @@ export {
     SearchBar,
     SideNav,
     BrowserContent,
+    Footer,
 };

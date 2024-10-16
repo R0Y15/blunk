@@ -8,7 +8,7 @@ body {
   font-family: "Sarabun", sans-serif;
   font-weight: 500;
   font-style: normal;
-  @apply bg-slate-100;
+  /* @apply bg-slate-100; */
 }
 
 @layer utilities {

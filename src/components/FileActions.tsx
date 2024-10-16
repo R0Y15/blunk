@@ -32,7 +32,10 @@ export function getFileUrl(fileId: Id<"_storage">): string {
 }
 // 4:8:28
 
-function FileCardActions({ file, isFav }: { file: Doc<"files">, isFav: boolean }) {
+function FileCardActions({ file, isFav }: {
+    file: Doc<"files"> & { url: string | null };
+    isFav: boolean;
+}) {
 
     const { toast } = useToast();
     const fav = useMutation(api.files.toggleFav);
@@ -75,7 +78,8 @@ function FileCardActions({ file, isFav }: { file: Doc<"files">, isFav: boolean }
                     <DropdownMenuItem
                         className='flex gap-1 items-center cursor-pointer'
                         onClick={() => {
-                            window.open(getFileUrl(file.fileId), "_blank")
+                            if (!file.url) return;
+                            window.open(file.url, "_blank")
                         }}
                     >
                         <FileIcon className='w-4 h-4' /> Download

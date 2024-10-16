@@ -3,7 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { ConvexClientProvider } from "./ConvexClientProvider";
 import { ClerkProvider } from "@clerk/nextjs";
-import { Navbar } from "@/components";
+import { Footer, Navbar } from "@/components";
 import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = localFont({
@@ -36,6 +36,7 @@ export default function RootLayout({
           <Toaster />
           <Navbar />
           {children}
+          <Footer />
         </ConvexClientProvider>
       </body>
     </html>

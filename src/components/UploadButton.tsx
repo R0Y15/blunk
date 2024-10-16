@@ -66,6 +66,9 @@ export function UploadButton() {
         const { storageId } = await result.json();
         const types = {
             "image/png": "image",
+            "image/jpg": "image",
+            "image/jpeg": "image",
+            "image/HEIC": "image",
             "application/pdf": "pdf",
             "text/csv": "csv",
         } as Record<string, Doc<"files">["type"]>;

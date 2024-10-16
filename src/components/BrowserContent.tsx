@@ -5,7 +5,7 @@ import { useQuery } from 'convex/react';
 import React, { useState } from 'react'
 import { useOrganization, useUser } from '@clerk/nextjs';
 import Image from 'next/image';
-import { GridIcon, Loader2, RowsIcon, TableIcon } from 'lucide-react';
+import { GridIcon, Loader2, RowsIcon } from 'lucide-react';
 import { api } from '../../convex/_generated/api';
 import { Doc } from '../../convex/_generated/dataModel';
 import { columns } from './columns';
@@ -20,8 +20,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Label } from './ui/label';
+import { usePathname } from 'next/navigation';
 
-function Placeholder() {
+function Placeholder({ path }: { path: string }) {
+  const placeholderText = path.split('/').pop();
   return (
     <div className="flex flex-col w-full items-center gap-8 mt-24">
       <Image
@@ -30,7 +32,11 @@ function Placeholder() {
         width={600}
         height={600}
       />
-      <p className='text-2xl'>You Have No Files, Upload One!</p>
+      <p className='text-2xl'>
+        {placeholderText === 'files' && 'You Have No Files, Upload One!'}
+        {placeholderText === 'favourites' && 'You Have No Files In Favorites, Mark One!'}
+        {placeholderText === 'trash' && 'You Have No Files In Trash'}
+      </p>
       <UploadButton />
     </div>
   )
@@ -39,6 +45,7 @@ function Placeholder() {
 const BrowserContent = ({ title, favouritesOnly, deleteOnly }: { title: string, favouritesOnly?: boolean, deleteOnly?: boolean }) => {
   const Organization = useOrganization();
   const user = useUser();
+  const path = usePathname();
   const [query, setQueryquery] = useState("");
   const [type, setType] = useState<Doc<"files">["type"] | "all">("all");
 
@@ -53,7 +60,6 @@ const BrowserContent = ({ title, favouritesOnly, deleteOnly }: { title: string, 
 
   const files = useQuery(api.files.getFile,
     orgId ? { orgId, query, fav: favouritesOnly, deleteOnly, type: type === "all" ? undefined : type } : "skip");
-  const isLoading = files === undefined;
 
   const modifiedFiles = files?.map((file) => ({
     ...file,
@@ -113,7 +119,7 @@ const BrowserContent = ({ title, favouritesOnly, deleteOnly }: { title: string, 
           </TabsContent>
         </Tabs>
 
-        {files?.length === 0 && (<Placeholder />)}
+        {files?.length === 0 && (<Placeholder path={path} />)}
       </div>
     </div>
   )

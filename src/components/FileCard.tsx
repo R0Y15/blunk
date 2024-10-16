@@ -22,7 +22,7 @@ import FileCardActions, { getFileUrl } from './FileActions';
 const FileCard = ({
     file
 }: {
-    file: Doc<"files"> & { isFav: boolean }
+    file: Doc<"files"> & { isFav: boolean, url: string | null }
 }) => {
 
     const userProfile = useQuery(api.users.getUserProfile, {
@@ -48,10 +48,10 @@ const FileCard = ({
                     <FileCardActions isFav={file.isFav} file={file} />
                 </div>
             </CardHeader>
-            <CardContent className='h-[200px] flex justify-center items-center'>
-                {file.type === "image" && (
+            <CardContent className='h-[200px] overflow-y-hidden flex justify-center items-center mb-3'>
+                {file.type === "image" && file.url && (
                     <Image
-                        src={getFileUrl(file.fileId)}
+                        src={file.url}
                         alt={file.name}
                         width={200}
                         height={100}
