@@ -70,7 +70,13 @@ export function UploadButton() {
             "image/jpeg": "image",
             "image/HEIC": "image",
             "application/pdf": "pdf",
+            "application/doc": "doc",
+            "application/docx": "doc",
+            "application/zip": "zip",
             "text/csv": "csv",
+            "text/txt": "csv",
+            "text/xlsx": "csv",
+            "text/xls": "csv",
         } as Record<string, Doc<"files">["type"]>;
 
         try {

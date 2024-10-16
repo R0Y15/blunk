@@ -1,7 +1,4 @@
 import { SideNav } from '@/components';
-import { Button } from '@/components/ui/button';
-import { FileIcon, StarIcon } from 'lucide-react';
-import Link from 'next/link';
 import React from 'react'
 export default function DashboardLayout({
   children,
