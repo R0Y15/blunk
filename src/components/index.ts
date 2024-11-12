@@ -5,6 +5,7 @@ import Navbar from "./Navbar";
 import SearchBar from "./SearchBar";
 import SideNav from "./SideNav";
 import { UploadButton } from "./UploadButton";
+import TextCard from "./TextCard";
 
 export {
     Navbar,
@@ -14,4 +15,5 @@ export {
     SideNav,
     BrowserContent,
     Footer,
+    TextCard,
 };

@@ -2,7 +2,7 @@
 
 import { FileCard, SearchBar, UploadButton } from '@/components'
 import { useQuery } from 'convex/react';
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useOrganization, useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import { GridIcon, Loader2, RowsIcon } from 'lucide-react';
@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Label } from './ui/label';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 function Placeholder({ path }: { path: string }) {
   const placeholderText = path.split('/').pop();
@@ -67,6 +67,14 @@ const BrowserContent = ({ title, favouritesOnly, deleteOnly }: { title: string, 
       .some((fav) => fav.fileId === file._id
       )
   })) ?? [];
+
+  const router = useRouter();
+
+  useEffect(() => {
+    if (files?.length === 0 && !favouritesOnly && !deleteOnly) {
+      router.push('/first-upload');
+    }
+  }, [files, favouritesOnly, deleteOnly]);
 
   return (
     <div>

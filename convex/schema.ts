@@ -7,6 +7,7 @@ export const FileTypes = v.union(
     v.literal("csv"),
     v.literal("zip"),
     v.literal("doc"),
+    v.literal("text"),
 );
 
 export const roles = v.union(
@@ -22,6 +23,10 @@ export default defineSchema({
         orgId: v.optional(v.string()),
         shouldDelete: v.optional(v.boolean()),
         userId: v.id("users"),
+        isGlobal: v.optional(v.boolean()),
+        fileKey: v.optional(v.string()),
+        globalExpiryTime: v.optional(v.number()),
+        content: v.optional(v.string()),
     }).index(
         "by_orgId",
         ["orgId"]
@@ -29,6 +34,14 @@ export default defineSchema({
         .index(
             "by_shouldDelete",
             ["shouldDelete"]
+        )
+        .index(
+            "by_fileKey",
+            ["fileKey"]
+        )
+        .index(
+            "by_isGlobal",
+            ["isGlobal"]
         ),
 
     users: defineTable({

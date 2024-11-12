@@ -9,4 +9,10 @@ crons.interval(
     internal.files.autoDeleteFiles
 );
 
+crons.interval(
+    "delete expired global files",
+    { minutes: 1 },
+    internal.files.deleteExpiredGlobalFiles
+);
+
 export default crons;

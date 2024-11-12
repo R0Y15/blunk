@@ -22,6 +22,7 @@ import { z } from "zod"
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Doc } from "../../convex/_generated/dataModel";
+import { useRouter } from 'next/navigation';
 
 const formSchema = z.object({
     title: z.string().min(1).max(200),
@@ -30,15 +31,39 @@ const formSchema = z.object({
         .refine((files) => files.length > 0, "Required"),
 })
 
-export function UploadButton() {
+export function UploadButton({ isGlobal }: { isGlobal?: boolean }) {
+    const { isSignedIn, user } = useUser();
+    
+    if (!isSignedIn) {
+        return null;
+    }
+
     const organization = useOrganization();
-    const user = useUser();
+    const router = useRouter();
     const generateUploadUrl = useMutation(api.files.generateUploadUrl);
     const { toast } = useToast();
     let orgId: string | undefined = undefined;
 
-    if (organization.isLoaded && user.isLoaded) {
-        orgId = organization.organization?.id ?? user.user?.id;
+    const types = {
+        "image/png": "image",
+        "image/jpg": "image",
+        "image/jpeg": "image",
+        "image/HEIC": "image",
+        "application/pdf": "pdf",
+        "application/doc": "doc",
+        "application/docx": "doc",
+        "application/zip": "zip",
+        "text/plain": "text",
+        "text/csv": "csv",
+        "text/txt": "csv",
+        "text/xlsx": "csv",
+        "text/xls": "csv",
+    } as Record<string, Doc<"files">["type"]>;
+
+    if (organization.isLoaded && organization.organization?.id) {
+        orgId = organization.organization.id;
+    } else if (organization.isLoaded && !organization.organization?.id) {
+        orgId = user?.id;
     }
 
     const [isFileDialogOpen, setIsFileDialogOpen] = useState(false);
@@ -52,52 +77,74 @@ export function UploadButton() {
 
     const fileRef = form.register("file");
 
+    const createGlobalFile = useMutation(api.files.createGlobalFile);
+
     async function onSubmit(values: z.infer<typeof formSchema>) {
-        if (!orgId) return;
+        if (isGlobal) {
+            const postUrl = await generateUploadUrl();
+            const result = await fetch(postUrl, {
+                method: "POST",
+                headers: { "Content-Type": values.file[0].type },
+                body: values.file[0],
+            });
 
-        const FileType = values.file[0].type;
-        const postUrl = await generateUploadUrl();
-        const result = await fetch(postUrl, {
-            method: "POST",
-            headers: { "Content-Type": FileType },
-            body: values.file[0],
-        });
+            const { storageId } = await result.json();
+            
+            try {
+                const fileKey = await createGlobalFile({
+                    name: values.title,
+                    fileId: storageId,
+                    type: types[values.file[0].type],
+                    isGlobal: true
+                });
 
-        const { storageId } = await result.json();
-        const types = {
-            "image/png": "image",
-            "image/jpg": "image",
-            "image/jpeg": "image",
-            "image/HEIC": "image",
-            "application/pdf": "pdf",
-            "application/doc": "doc",
-            "application/docx": "doc",
-            "application/zip": "zip",
-            "text/csv": "csv",
-            "text/txt": "csv",
-            "text/xlsx": "csv",
-            "text/xls": "csv",
-        } as Record<string, Doc<"files">["type"]>;
+                toast({
+                    variant: "success",
+                    title: "File Shared Successfully",
+                    description: `File Key: ${fileKey} (valid for 10 minutes)`,
+                });
+            } catch (error) {
+                toast({
+                    variant: "destructive",
+                    title: "Error sharing file",
+                    description: "Please try again later",
+                });
+            }
+        } else {
+            if (!orgId) return;
 
-        try {
-            await createFile({
-                name: values.title,
-                fileId: storageId,
-                orgId,
-                type: types[FileType]
-            })
+            const FileType = values.file[0].type;
+            const postUrl = await generateUploadUrl();
+            const result = await fetch(postUrl, {
+                method: "POST",
+                headers: { "Content-Type": FileType },
+                body: values.file[0],
+            });
 
-            toast({
-                variant: "success",
-                title: "File Uploaded",
-                description: "Your file has been uploaded successfully",
-            })
-        } catch (error) {
-            toast({
-                variant: "destructive",
-                title: "Something went wrong",
-                description: "Please try again later",
-            })
+            const { storageId } = await result.json();
+
+            try {
+                await createFile({
+                    name: values.title,
+                    fileId: storageId,
+                    orgId,
+                    type: types[FileType]
+                })
+
+                toast({
+                    variant: "success",
+                    title: "File Uploaded",
+                    description: "Your file has been uploaded successfully",
+                })
+
+                router.push('/dashboard/files');
+            } catch (error) {
+                toast({
+                    variant: "destructive",
+                    title: "Something went wrong",
+                    description: "Please try again later",
+                })
+            }
         }
 
         form.reset();

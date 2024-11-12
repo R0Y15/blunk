@@ -9,7 +9,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { FileIcon, MoreVerticalIcon, StarHalf, StarIcon, TrashIcon, UndoIcon } from 'lucide-react'
+import { FileIcon, MoreVerticalIcon, StarHalf, StarIcon, TrashIcon, UndoIcon, DownloadIcon } from 'lucide-react'
 
 import {
     AlertDialog,
@@ -24,118 +24,191 @@ import {
 import { api } from '../../convex/_generated/api';
 import { useMutation, useQuery } from 'convex/react';
 import { useToast } from '@/hooks/use-toast';
-import { Protect } from '@clerk/nextjs';
+import { Protect, useOrganization, useUser } from '@clerk/nextjs';
 
-// File URL
-export function getFileUrl(fileId: Id<"_storage">): string {
-    return `${process.env.NEXT_PUBLIC_CONVEX_URL}/api/storage/${fileId}`;
-}
-// 4:8:28
-
-function FileCardActions({ file, isFav }: {
-    file: Doc<"files"> & { url: string | null };
+function FileCardActions({
+    isFav,
+    file,
+}: {
     isFav: boolean;
+    file: Doc<"files">;
 }) {
-
     const { toast } = useToast();
-    const fav = useMutation(api.files.toggleFav);
+    const Organization = useOrganization();
+    const user = useUser();
     const deleteFile = useMutation(api.files.deleteFile);
-    const restoreFile = useMutation(api.files.restoreFile);
-    const me = useQuery(api.users.getMe);
-    const [isOpen, setIsOpen] = useState(false);
+    const toggleFav = useMutation(api.files.toggleFav);
+    const getFileUrl = useMutation(api.files.getFileUrl);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
+    const currentUser = useQuery(api.users.getMe);
+    const isOwner = currentUser?._id === file.userId;
+
+    let orgId: string | undefined = undefined;
+    if (Organization.isLoaded && user.user?.id) {
+        orgId = Organization.organization?.id ?? user.user?.id;
+    }
+
+    const downloadFile = async () => {
+        try {
+            const fileUrl = await getFileUrl({ fileId: file.fileId });
+            
+            if (!fileUrl) {
+                throw new Error("Could not get file URL");
+            }
+            
+            // For images and PDFs, directly open the URL
+            if (file.type === "image" || file.type === "pdf") {
+                window.open(fileUrl, '_blank');
+                toast({
+                    title: "Success",
+                    description: "File opened in new tab",
+                });
+                return;
+            }
+
+            // For other file types, trigger download
+            const response = await fetch(fileUrl);
+            if (!response.ok) {
+                throw new Error('Failed to fetch file');
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const downloadLink = document.createElement('a');
+            downloadLink.href = downloadUrl;
+            downloadLink.download = file.name;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            
+            // Cleanup
+            setTimeout(() => {
+                window.URL.revokeObjectURL(downloadUrl);
+            }, 1000);
+
+            toast({
+                title: "Success",
+                description: "File downloaded successfully",
+            });
+        } catch (error) {
+            console.error('Error handling file:', error);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Failed to handle file",
+            });
+        }
+    };
+
+    // Helper function to determine content type
+    const getContentType = (extension: string | undefined): string => {
+        switch (extension) {
+            case 'png': return 'image/png';
+            case 'jpg':
+            case 'jpeg': return 'image/jpeg';
+            case 'gif': return 'image/gif';
+            case 'pdf': return 'application/pdf';
+            case 'csv': return 'text/csv';
+            default: return 'application/octet-stream';
+        }
+    };
 
     return (
         <>
-            <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+            <DropdownMenu>
+                <DropdownMenuTrigger>
+                    <MoreVerticalIcon className="h-4 w-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                    <DropdownMenuItem onClick={downloadFile}>
+                        <div className="flex gap-2 items-center">
+                            <DownloadIcon className="w-4 h-4" />
+                            Download File
+                        </div>
+                    </DropdownMenuItem>
+
+                    {!file.isGlobal && (
+                        <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                                onClick={() => {
+                                    if (!orgId) return;
+                                    toggleFav({
+                                        fileId: file._id,
+                                    });
+                                }}
+                            >
+                                {isFav ? (
+                                    <div className="flex gap-2 items-center">
+                                        <StarIcon className="w-4 h-4" />
+                                        Unfavourite
+                                    </div>
+                                ) : (
+                                    <div className="flex gap-2 items-center">
+                                        <StarHalf className="w-4 h-4" />
+                                        Favourite
+                                    </div>
+                                )}
+                            </DropdownMenuItem>
+                        </>
+                    )}
+
+                    {isOwner && (
+                        <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                                onClick={() => setIsConfirmOpen(true)}
+                                className="text-red-600"
+                            >
+                                <div className="flex gap-2 items-center">
+                                    <TrashIcon className="w-4 h-4" />
+                                    Delete
+                                </div>
+                            </DropdownMenuItem>
+                        </>
+                    )}
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action will mark your file for deletion. The file will be permanently deleted from our servers soon. You can always recover the file from the trash bin within 7 days.
+                            This action cannot be undone. This will permanently delete your
+                            file.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                            className='bg-red-600 hover:bg-red-700'
-                            onClick={() => {
-                                deleteFile({ fileId: file._id })
-                                toast({
-                                    variant: "default",
-                                    title: "File Deleted",
-                                    description: "You Can Recover the File From The TrashBin",
-                                })
-                            }}>
-                            Continue
+                            onClick={async () => {
+                                try {
+                                    await deleteFile({
+                                        fileId: file._id,
+                                    });
+                                    toast({
+                                        variant: "default",
+                                        title: "File Deleted",
+                                        description: "Your file has been deleted successfully",
+                                    });
+                                } catch (error) {
+                                    toast({
+                                        variant: "destructive",
+                                        title: "Error Deleting File",
+                                        description: "Only the file owner can delete this file",
+                                    });
+                                }
+                            }}
+                        >
+                            Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-
-            <DropdownMenu>
-                <DropdownMenuTrigger><MoreVerticalIcon /></DropdownMenuTrigger>
-                <DropdownMenuContent>
-                    <DropdownMenuItem
-                        className='flex gap-1 items-center cursor-pointer'
-                        onClick={() => {
-                            if (!file.url) return;
-                            window.open(file.url, "_blank")
-                        }}
-                    >
-                        <FileIcon className='w-4 h-4' /> Download
-                    </DropdownMenuItem>
-
-                    <DropdownMenuItem
-                        className='flex gap-1 items-center cursor-pointer'
-                        onClick={() => fav({ fileId: file._id })}
-                    >
-                        {isFav ? (
-                            <div className='flex gap-1 items-center'>
-                                <StarIcon className='w-4 h-4' /> UnFavourite
-                            </div>
-                        ) : (
-                            <div className='flex gap-1 items-center'>
-                                <StarHalf className='w-4 h-4' /> Favourite
-                            </div>
-                        )}
-                    </DropdownMenuItem>
-
-                    <Protect
-                        condition={(check) => {
-                            return check({
-                                role: "org:admin"
-                            }) || file.userId === me?._id;
-                        }}
-                        fallback={<></>}
-                    >
-                        <DropdownMenuSeparator />
-
-                        <DropdownMenuItem
-                            className='flex gap-1 items-center cursor-pointer'
-                            onClick={() => {
-                                if (file.shouldDelete) {
-                                    restoreFile({ fileId: file._id })
-                                } else {
-                                    setIsOpen(true)
-                                }
-                            }}
-                        >
-                            {file.shouldDelete ? (
-                                <div className='flex gap-1 text-green-600 items-center cursor-pointer'>
-                                    <UndoIcon className='w-4 h-4' /> Restore
-                                </div>
-                            ) : (
-                                <div className='flex gap-1 text-red-600 items-center cursor-pointer'>
-                                    <TrashIcon className='w-4 h-4' /> Delete
-                                </div>
-                            )}
-                            {/* <TrashIcon className='w-4 h-4' /> Delete */}
-                        </DropdownMenuItem>
-                    </Protect>
-                </DropdownMenuContent>
-            </DropdownMenu >
         </>
-    )
+    );
 }
 
 export default FileCardActions;

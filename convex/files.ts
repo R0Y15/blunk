@@ -174,21 +174,40 @@ export const autoDeleteFiles = internalMutation({
 })
 
 export const deleteFile = mutation({
-    args: { fileId: v.id("files") },
+    args: {
+        fileId: v.id("files"),
+    },
     async handler(ctx, args) {
-        const access = await hasAccessToFile(ctx, args.fileId);
-
-        if (!access) {
-            throw new ConvexError("Unauthorized access to this organization");
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new ConvexError("Unauthorized");
         }
 
-        assertCanDeleteFile(access.user, access.file);
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_tokenIdentifier", q =>
+                q.eq("tokenIdentifier", identity.tokenIdentifier)
+            )
+            .first();
 
-        await ctx.db.patch(args.fileId, {
-            shouldDelete: true,
-        })
-    }
-})
+        if (!user) {
+            throw new ConvexError("Unauthorized");
+        }
+
+        const file = await ctx.db.get(args.fileId);
+        if (!file) {
+            throw new ConvexError("File not found");
+        }
+
+        // Check if user is the file owner
+        if (file.userId !== user._id) {
+            throw new ConvexError("Only the file owner can delete this file");
+        }
+
+        await ctx.storage.delete(file.fileId);
+        await ctx.db.delete(args.fileId);
+    },
+});
 
 export const restoreFile = mutation({
     args: { fileId: v.id("files") },
@@ -256,3 +275,169 @@ export const getAllFavs = query({
         return favs;
     }
 })
+
+export const createGlobalFile = mutation({
+    args: {
+        name: v.string(),
+        fileId: v.id("_storage"),
+        type: FileTypes,
+        isGlobal: v.boolean(),
+    },
+    async handler(ctx, args) {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new ConvexError("Unauthorized");
+        }
+
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_tokenIdentifier", q =>
+                q.eq("tokenIdentifier", identity.tokenIdentifier)
+            )
+            .first();
+
+        if (!user) {
+            throw new ConvexError("Unauthorized");
+        }
+
+        // Generate a random 8-character file key
+        const fileKey = Math.random().toString(36).substring(2, 10);
+        
+        // Set expiry time to 10 minutes from now
+        const globalExpiryTime = Date.now() + 10 * 60 * 1000;
+
+        await ctx.db.insert("files", {
+            name: args.name,
+            fileId: args.fileId,
+            type: args.type,
+            userId: user._id,
+            isGlobal: true,
+            fileKey,
+            globalExpiryTime
+        });
+
+        return fileKey;
+    }
+});
+
+export const getGlobalFiles = query({
+    args: {
+        fileKey: v.optional(v.string())
+    },
+    async handler(ctx, args) {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            return [];
+        }
+
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_tokenIdentifier", q =>
+                q.eq("tokenIdentifier", identity.tokenIdentifier)
+            )
+            .first();
+
+        if (!user) {
+            return [];
+        }
+
+        let files;
+        if (args.fileKey) {
+            // If fileKey is provided, get that specific file
+            files = await ctx.db
+                .query("files")
+                .withIndex("by_fileKey", q => q.eq("fileKey", args.fileKey))
+                .filter(q => 
+                    q.and(
+                        q.gt(q.field("globalExpiryTime"), Date.now()),
+                        q.eq(q.field("isGlobal"), true)
+                    )
+                )
+                .collect();
+        } else {
+            // If no fileKey, only show user's own global files
+            files = await ctx.db
+                .query("files")
+                .withIndex("by_isGlobal", q => q.eq("isGlobal", true))
+                .filter(q => 
+                    q.and(
+                        q.eq(q.field("userId"), user._id),
+                        q.gt(q.field("globalExpiryTime"), Date.now())
+                    )
+                )
+                .collect();
+        }
+
+        const filesWithUrl = await Promise.all(
+            files.map(async (file) => ({
+                ...file,
+                url: await ctx.storage.getUrl(file.fileId),
+            }))
+        );
+
+        return filesWithUrl;
+    }
+});
+
+export const deleteExpiredGlobalFiles = internalMutation({
+    args: {},
+    async handler(ctx) {
+        const expiredFiles = await ctx.db
+            .query("files")
+            .withIndex("by_isGlobal", q => q.eq("isGlobal", true))
+            .collect();
+
+        const now = Date.now();
+        
+        await Promise.all(
+            expiredFiles
+                .filter(file => file.globalExpiryTime && file.globalExpiryTime < now)
+                .map(async (file) => {
+                    await ctx.storage.delete(file.fileId);
+                    return await ctx.db.delete(file._id);
+                })
+        );
+    }
+});
+
+export const getPublicGlobalFiles = query({
+    args: {
+        fileKey: v.optional(v.string())
+    },
+    async handler(ctx, args) {
+        if (!args.fileKey) {
+            return [];
+        }
+
+        const files = await ctx.db
+            .query("files")
+            .withIndex("by_fileKey", q => q.eq("fileKey", args.fileKey))
+            .filter(q => 
+                q.and(
+                    q.gt(q.field("globalExpiryTime"), Date.now()),
+                    q.eq(q.field("isGlobal"), true)
+                )
+            )
+            .collect();
+
+        const filesWithUrl = await Promise.all(
+            files.map(async (file) => ({
+                ...file,
+                url: await ctx.storage.getUrl(file.fileId),
+            }))
+        );
+
+        return filesWithUrl;
+    }
+});
+
+export const getFileUrl = mutation({
+    args: { fileId: v.id("_storage") },
+    handler: async (ctx, args) => {
+        const url = await ctx.storage.getUrl(args.fileId);
+        if (!url) {
+            throw new Error("Could not get file URL");
+        }
+        return url;
+    },
+});

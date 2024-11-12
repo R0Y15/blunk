@@ -9,6 +9,29 @@ const config: Config = {
 	],
 	theme: {
 		extend: {
+			fontFamily: {
+				hero: ['var(--font-bricolage)', 'sans-serif'],
+				sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+				inter: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+			},
+			fontWeight: {
+				'hero-extralight': '200',
+				'hero-light': '300',
+				'hero-regular': '400',
+				'hero-medium': '500',
+				'hero-semibold': '600',
+				'hero-bold': '700',
+				'hero-extrabold': '800',
+				'thin': '100',
+				'extralight': '200',
+				'light': '300',
+				'normal': '400',
+				'medium': '500',
+				'semibold': '600',
+				'bold': '700',
+				'extrabold': '800',
+				'black': '900',
+			},
 			colors: {
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
@@ -59,8 +82,8 @@ const config: Config = {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
-			}
-		}
+			},
+		},
 	},
 	plugins: [require("tailwindcss-animate")],
 };
