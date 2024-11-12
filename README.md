@@ -1,7 +1,7 @@
 # Blunk
 Blunk is a modern, cloud-based file management system built with Next.js, Convex, and Clerk. It provides a seamless experience for users to upload, organize, and share files within their organizations.
-!FileDrive Logo
 
+![Blunk Dashboard](public/blunk.png)
 
 ## Features
 - 🚀 Fast and responsive file management
