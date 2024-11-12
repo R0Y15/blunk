@@ -13,6 +13,7 @@ import { TextUploadDialog } from "@/components/TextUploadDialog";
 import { UploadButton } from "@/components/UploadButton";
 import { cn } from "@/lib/utils";
 import { useUser } from "@clerk/nextjs";
+import React from 'react';
 
 const PublicGlobalPage = () => {
     const [fileKey, setFileKey] = useState("");
@@ -157,7 +158,7 @@ const PublicGlobalPage = () => {
                 {fileKey ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {files?.map((file) => (
-                            <div key={file._id} className="relative">
+                            <div key={file._id.toString()} className="relative">
                                 <FileCard file={{ ...file, isFav: false }} hideDropdown />
                                 <div className="absolute top-2 right-2">
                                     <Button
@@ -174,28 +175,28 @@ const PublicGlobalPage = () => {
                                     >
                                         {file.type === "text" ? (
                                             copiedFileId === file.fileId.toString() ? (
-                                                <>
+                                                <React.Fragment key={`copied-${file._id}`}>
                                                     <Check className="w-4 h-4 mr-2" />
                                                     Copied!
-                                                </>
+                                                </React.Fragment>
                                             ) : (
-                                                <>
+                                                <React.Fragment key={`copy-${file._id}`}>
                                                     <Copy className="w-4 h-4 mr-2" />
                                                     Copy Text
-                                                </>
+                                                </React.Fragment>
                                             )
                                         ) : (
-                                            <>
+                                            <React.Fragment key={`view-${file._id}`}>
                                                 <Eye className="w-4 h-4 mr-2" />
                                                 View File
-                                            </>
+                                            </React.Fragment>
                                         )}
                                     </Button>
                                 </div>
                             </div>
                         ))}
                         {files?.length === 0 && (
-                            <div className="col-span-3 text-center mt-12">
+                            <div key="no-files" className="col-span-3 text-center mt-12">
                                 <p className="text-lg text-gray-600">
                                     No files found for this key or the file has expired.
                                 </p>
@@ -203,7 +204,7 @@ const PublicGlobalPage = () => {
                         )}
                     </div>
                 ) : (
-                    <div className="text-center mt-12">
+                    <div key="enter-key" className="text-center mt-12">
                         <p className="text-lg text-gray-600">
                             Enter a file key to view shared files.
                         </p>
