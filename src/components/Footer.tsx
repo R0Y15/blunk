@@ -6,7 +6,7 @@ const Footer = () => {
     <>
       <footer className="my-16">
         <p className="text-center text-sm text-slate-500">
-          Copyright © {new Date().getFullYear()} FileDrive. All rights reserved.
+          Copyright © {new Date().getFullYear()} Blunk. All rights reserved.
         </p>
         
         <p className="text-center text-xs text-slate-500 mt-1">
