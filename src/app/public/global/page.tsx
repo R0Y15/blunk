@@ -125,7 +125,7 @@ const PublicGlobalPage = () => {
                 }
             `}</style>
             
-            <div className="container mx-auto p-6">
+            <div className="container max-w-screen-xl mx-auto px-4 p-6">
                 <div className="flex justify-between items-center mb-8">
                     <h1 className="text-4xl font-bold">Global Files</h1>
                     {isSignedIn && (
