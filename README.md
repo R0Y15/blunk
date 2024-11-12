@@ -12,7 +12,6 @@ Blunk is a modern, cloud-based file management system built with Next.js, Convex
 - 🖼️ Image preview for supported file types
 - 📱 Responsive design for desktop and mobile
 
-
 ## Tech Stack
 - Next.js - React framework for building user interfaces
 - Convex - Backend-as-a-Service for real-time data sync
