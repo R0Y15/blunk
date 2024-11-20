@@ -9,12 +9,14 @@ import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useRouter } from 'next/navigation'
 import { Doc } from '../../../convex/_generated/dataModel'
+import { FileCard } from '@/components'
 
 const FirstUploadPage = () => {
     const [files, setFiles] = useState<File[]>([])
     const [fileTitle, setFileTitle] = useState('')
     const [isUploading, setIsUploading] = useState(false)
     const [uploadComplete, setUploadComplete] = useState(false)
+    const [uploadedFile, setUploadedFile] = useState<Doc<"files"> & { isFav: boolean } | null>(null)
     const router = useRouter()
     const organization = useOrganization()
     const user = useUser()
@@ -39,6 +41,7 @@ const FirstUploadPage = () => {
 
     const removeFile = (fileToRemove: File) => {
         setFiles(files.filter(file => file !== fileToRemove))
+        setFileTitle('')
     }
 
     const generateUploadUrl = useMutation(api.files.generateUploadUrl)
@@ -51,14 +54,11 @@ const FirstUploadPage = () => {
         try {
             setIsUploading(true)
 
-            // Get the file type
             const file = files[0]
             const fileType = file.type
 
-            // Generate upload URL
             const postUrl = await generateUploadUrl()
 
-            // Upload the file
             const result = await fetch(postUrl, {
                 method: "POST",
                 headers: { "Content-Type": fileType },
@@ -67,7 +67,6 @@ const FirstUploadPage = () => {
 
             const { storageId } = await result.json()
 
-            // Map file types
             const types = {
                 "image/png": "image",
                 "image/jpg": "image",
@@ -77,7 +76,6 @@ const FirstUploadPage = () => {
                 "text/xlsx": "csv",
             } as Record<string, Doc<"files">["type"]>
 
-            // Create file record
             await createFile({
                 name: fileTitle,
                 fileId: storageId,
@@ -87,7 +85,6 @@ const FirstUploadPage = () => {
 
             setUploadComplete(true)
 
-            // Reset and redirect
             setTimeout(() => {
                 setFiles([])
                 setFileTitle('')
@@ -102,7 +99,6 @@ const FirstUploadPage = () => {
         }
     }
 
-    // If user has existing files, show dashboard redirect
     if (existingFiles && existingFiles.length > 0) {
         return (
             <div className="min-h-[75dvh] flex items-center justify-center p-4">
@@ -121,7 +117,6 @@ const FirstUploadPage = () => {
         )
     }
 
-    // Show upload UI for new users
     return (
         <div className="min-h-[75dvh] flex items-center justify-center p-4">
             <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
@@ -142,32 +137,78 @@ const FirstUploadPage = () => {
                         />
                     </div>
 
-                    <div
-                        {...getRootProps()}
-                        className={`border-2 border-dashed rounded-lg p-8 mb-4 transition-colors ${isDragActive ? 'border-purple-400 bg-purple-50' : 'border-gray-300'
-                            }`}
-                    >
-                        <input {...getInputProps()} />
-                        <div className="text-center">
-                            <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                            <p className="mt-2 text-sm text-gray-600">
-                                Drop a file here, or click to select a file
-                            </p>
+                    {files.length === 0 ? (
+                        <div
+                            {...getRootProps()}
+                            className={`border-2 border-dashed rounded-lg p-8 mb-4 transition-colors ${isDragActive ? 'border-purple-400 bg-purple-50' : 'border-gray-300'
+                                }`}
+                        >
+                            <input {...getInputProps()} />
+                            <div className="text-center">
+                                <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                                <p className="mt-2 text-sm text-gray-600">
+                                    Drop a file here, or click to select a file
+                                </p>
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="mb-4">
+                            <div className="p-4 border rounded-lg bg-gray-50">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <FileIcon className="h-8 w-8 text-purple-500" />
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900">
+                                                {files[0].name}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                {(files[0].size / 1024 / 1024).toFixed(2)} MB
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => removeFile(files[0])}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <Button
                         type="submit"
                         className="w-full font-semibold py-2 px-4 rounded"
                         disabled={files.length === 0 || !fileTitle.trim() || isUploading || uploadComplete}
                     >
-                        {isUploading ? 'Uploading...' : uploadComplete ? 'Upload Complete!' : 'Upload File'}
+                        {isUploading ? (
+                            <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                Uploading...
+                            </div>
+                        ) : uploadComplete ? (
+                            <div className="flex items-center gap-2">
+                                <CheckCircle className="h-4 w-4" />
+                                Upload Complete!
+                            </div>
+                        ) : (
+                            'Upload File'
+                        )}
                     </Button>
                 </form>
-                {uploadComplete && (
-                    <div className="mt-4 text-center text-green-600 flex items-center justify-center">
-                        <CheckCircle className="mr-2 h-5 w-5" />
-                        <span>Files uploaded successfully!</span>
+
+                {uploadComplete && uploadedFile && (
+                    <div className="mt-6 text-center">
+                        <div className="mb-4 text-green-600 flex items-center justify-center gap-2">
+                            <CheckCircle className="h-5 w-5" />
+                            <span>File uploaded successfully!</span>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Redirecting to dashboard in 3 seconds...
+                        </p>
                     </div>
                 )}
             </div>
