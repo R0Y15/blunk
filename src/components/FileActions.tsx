@@ -36,10 +36,12 @@ function FileCardActions({
     const { toast } = useToast();
     const Organization = useOrganization();
     const user = useUser();
-    const deleteFile = useMutation(api.files.deleteFile);
+    const moveToTrash = useMutation(api.files.moveToTrash);
+    const permanentlyDeleteFile = useMutation(api.files.permanentlyDeleteFile);
     const toggleFav = useMutation(api.files.toggleFav);
     const getFileUrl = useMutation(api.files.getFileUrl);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const restoreFile = useMutation(api.files.restoreFile);
 
     const currentUser = useQuery(api.users.getMe);
     const isOwner = currentUser?._id === file.userId;
@@ -114,6 +116,39 @@ function FileCardActions({
         }
     };
 
+    const handleDelete = async () => {
+        try {
+            if (file.shouldDelete) {
+                // If file is already in trash, permanently delete it
+                await permanentlyDeleteFile({
+                    fileId: file._id,
+                });
+                toast({
+                    title: "File Deleted",
+                    description: "File has been permanently deleted",
+                });
+            } else {
+                // Move file to trash
+                await moveToTrash({
+                    fileId: file._id,
+                });
+                toast({
+                    title: "Moved to Trash",
+                    description: "File has been moved to trash",
+                });
+            }
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: file.shouldDelete 
+                    ? "Failed to delete file" 
+                    : "Failed to move file to trash",
+            });
+        }
+        setIsConfirmOpen(false);
+    };
+
     return (
         <>
             <DropdownMenu>
@@ -163,9 +198,39 @@ function FileCardActions({
                             >
                                 <div className="flex gap-2 items-center">
                                     <TrashIcon className="w-4 h-4" />
-                                    Delete
+                                    {file.shouldDelete ? 'Delete Permanently' : 'Move to Trash'}
                                 </div>
                             </DropdownMenuItem>
+                        </>
+                    )}
+
+                    {file.shouldDelete && (
+                        <>
+                            <DropdownMenuItem
+                                onClick={async () => {
+                                    try {
+                                        await restoreFile({
+                                            fileId: file._id,
+                                        });
+                                        toast({
+                                            title: "File Restored",
+                                            description: "File has been restored successfully",
+                                        });
+                                    } catch (error) {
+                                        toast({
+                                            variant: "destructive",
+                                            title: "Error",
+                                            description: "Failed to restore file",
+                                        });
+                                    }
+                                }}
+                            >
+                                <div className="flex gap-2 items-center">
+                                    <UndoIcon className="w-4 h-4" />
+                                    Restore
+                                </div>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                         </>
                     )}
                 </DropdownMenuContent>
@@ -176,33 +241,15 @@ function FileCardActions({
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete your
-                            file.
+                            {file.shouldDelete 
+                                ? "This action cannot be undone. This will permanently delete your file."
+                                : "This will move the file to trash. You can restore it later."}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={async () => {
-                                try {
-                                    await deleteFile({
-                                        fileId: file._id,
-                                    });
-                                    toast({
-                                        variant: "default",
-                                        title: "File Deleted",
-                                        description: "Your file has been deleted successfully",
-                                    });
-                                } catch (error) {
-                                    toast({
-                                        variant: "destructive",
-                                        title: "Error Deleting File",
-                                        description: "Only the file owner can delete this file",
-                                    });
-                                }
-                            }}
-                        >
-                            Delete
+                        <AlertDialogAction onClick={handleDelete}>
+                            {file.shouldDelete ? 'Delete Permanently' : 'Move to Trash'}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

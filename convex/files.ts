@@ -173,47 +173,50 @@ export const autoDeleteFiles = internalMutation({
     },
 })
 
-export const deleteFile = mutation({
-    args: {
-        fileId: v.id("files"),
-    },
+export const moveToTrash = mutation({
+    args: { fileId: v.id("files") },
     async handler(ctx, args) {
-        const identity = await ctx.auth.getUserIdentity();
-        if (!identity) {
-            throw new ConvexError("Unauthorized");
+        const access = await hasAccessToFile(ctx, args.fileId);
+        
+        if (!access) {
+            throw new ConvexError("Unauthorized access to this organization");
         }
 
-        const user = await ctx.db
-            .query("users")
-            .withIndex("by_tokenIdentifier", q =>
-                q.eq("tokenIdentifier", identity.tokenIdentifier)
-            )
-            .first();
+        assertCanDeleteFile(access.user, access.file);
 
-        if (!user) {
-            throw new ConvexError("Unauthorized");
+        // Instead of deleting, mark the file as "shouldDelete"
+        await ctx.db.patch(args.fileId, {
+            shouldDelete: true,
+        });
+    }
+});
+
+export const permanentlyDeleteFile = mutation({
+    args: { fileId: v.id("files") },
+    async handler(ctx, args) {
+        const access = await hasAccessToFile(ctx, args.fileId);
+        
+        if (!access) {
+            throw new ConvexError("Unauthorized access to this organization");
         }
 
-        const file = await ctx.db.get(args.fileId);
-        if (!file) {
-            throw new ConvexError("File not found");
-        }
+        assertCanDeleteFile(access.user, access.file);
 
-        // Check if user is the file owner
-        if (file.userId !== user._id) {
-            throw new ConvexError("Only the file owner can delete this file");
+        const file = access.file;
+        if (!file.shouldDelete) {
+            throw new ConvexError("File must be in trash before permanent deletion");
         }
 
         await ctx.storage.delete(file.fileId);
         await ctx.db.delete(args.fileId);
-    },
+    }
 });
 
 export const restoreFile = mutation({
     args: { fileId: v.id("files") },
     async handler(ctx, args) {
         const access = await hasAccessToFile(ctx, args.fileId);
-
+        
         if (!access) {
             throw new ConvexError("Unauthorized access to this organization");
         }
@@ -222,9 +225,9 @@ export const restoreFile = mutation({
 
         await ctx.db.patch(args.fileId, {
             shouldDelete: false,
-        })
+        });
     }
-})
+});
 
 export const toggleFav = mutation({
     args: { fileId: v.id("files") },
