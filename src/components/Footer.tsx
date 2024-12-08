@@ -1,25 +1,28 @@
+import { Separator } from '@/components/ui/separator'
 import Link from 'next/link'
 import React from 'react'
 
 const Footer = () => {
   return (
-    <>
-      <footer className="my-16">
-        <p className="text-center text-sm text-slate-500">
-          Copyright © {new Date().getFullYear()} Blunk. All rights reserved.
+    <footer className="max-w-screen-xl mx-auto px-5 my-8">
+      <Separator className="mb-8" />
+      <div className="flex flex-col items-center gap-1">
+        <p className="text-sm text-muted-foreground">
+          Copyright &copy; {new Date().getFullYear()} Blunk. All rights reserved.
         </p>
-        
-        <p className="text-center text-xs text-slate-500 mt-1">
-          Made by <a
+        <p className="text-xs text-muted-foreground">
+          Made by{' '}
+          <Link
             href="https://me-roy.vercel.app"
             target="_blank"
             rel="noopener"
-            className="hover:underline">
+            className="underline underline-offset-4 hover:text-foreground transition-colors"
+          >
             Roy
-          </a>
+          </Link>
         </p>
-      </footer>
-    </>
+      </div>
+    </footer>
   )
 }
 
