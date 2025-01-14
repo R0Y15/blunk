@@ -50,9 +50,11 @@ const typeConfig: Record<
 const FileCard = ({
   file,
   hideDropdown,
+  priority,
 }: {
   file: Doc<'files'> & { isFav: boolean; url?: string | null };
   hideDropdown?: boolean;
+  priority?: boolean;
 }) => {
   const userProfile = useQuery(api.users.getUserProfile, { userId: file.userId });
   const config = typeConfig[file.type] ?? {
@@ -71,6 +73,7 @@ const FileCard = ({
             src={file.url}
             alt={file.name}
             fill
+            priority={priority}
             className="object-cover"
             sizes="(max-width: 768px) 50vw, 25vw"
           />

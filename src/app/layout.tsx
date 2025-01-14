@@ -16,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${bricolage.variable} ${inter.variable}`}>
+    <html lang="en" className={`${bricolage.variable} ${inter.variable}`} suppressHydrationWarning>
       <body>
         <ConvexClientProvider>
           <Toaster />

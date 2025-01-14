@@ -158,9 +158,9 @@ const PublicGlobalPage = () => {
                         </div>
                     )}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {files?.map((file) => (
+                        {files?.map((file, index) => (
                             <div key={file._id.toString()} className="relative">
-                                <FileCard file={{ ...file, isFav: false }} hideDropdown />
+                                <FileCard file={{ ...file, isFav: false }} hideDropdown priority={index === 0} />
                                 <div className="absolute top-2 right-2">
                                     <Button
                                         variant="secondary"

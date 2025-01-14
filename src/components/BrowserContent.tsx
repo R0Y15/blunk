@@ -256,8 +256,8 @@ const BrowserContent = ({
           {/* Grid View */}
           <TabsContent value="grid" className="mt-0">
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-              {modifiedFiles.map((file) => (
-                <FileCard key={file._id} file={file} />
+              {modifiedFiles.map((file, index) => (
+                <FileCard key={file._id} file={file} priority={index === 0} />
               ))}
             </div>
           </TabsContent>

@@ -80,9 +80,9 @@ const GlobalPage = () => {
               </div>
             )}
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-              {files?.map((file) => (
+              {files?.map((file, index) => (
                 <div key={file._id.toString()} className="relative group">
-                  <FileCard file={file} />
+                  <FileCard file={file} priority={index === 0} />
                   {file.fileKey && (
                     <Button
                       size="sm"
