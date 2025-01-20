@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ConvexClientProvider } from "./ConvexClientProvider";
-import { Footer, Navbar } from "@/components";
 import { Toaster } from "@/components/ui/toaster";
 import { bricolage, inter } from './fonts';
 
@@ -20,9 +19,7 @@ export default function RootLayout({
       <body>
         <ConvexClientProvider>
           <Toaster />
-          <Navbar />
           {children}
-          <Footer />
         </ConvexClientProvider>
       </body>
     </html>
