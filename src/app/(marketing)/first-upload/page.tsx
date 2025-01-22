@@ -16,9 +16,9 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { useOrganization, useUser } from '@clerk/nextjs'
 import { useQuery, useMutation } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
+import { api } from '../../../../convex/_generated/api'
 import { useRouter } from 'next/navigation'
-import { Doc } from '../../../convex/_generated/dataModel'
+import { Doc } from '../../../../convex/_generated/dataModel'
 import { FileCard } from '@/components'
 
 const FirstUploadPage = () => {
