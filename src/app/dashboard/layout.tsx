@@ -1,19 +1,17 @@
 import { SideNav } from '@/components';
 import React from 'react'
+
 export default function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <main className="container mx-auto pt-12">
-      <div className="flex gap-8">
-        <SideNav />
-
-        <div className="w-full">
-          {children}
-        </div>
-      </div>
-    </main >
+    <div className="flex h-[calc(100vh-80px)]">
+      <SideNav />
+      <main className="flex-1 overflow-y-auto bg-zinc-50/50">
+        {children}
+      </main>
+    </div>
   );
 }

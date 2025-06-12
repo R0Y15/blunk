@@ -1,261 +1,205 @@
 "use client";
 
 import React, { useState } from 'react'
-import { Doc, Id } from '../../convex/_generated/dataModel'
+import { Doc } from '../../convex/_generated/dataModel'
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { FileIcon, MoreVerticalIcon, StarHalf, StarIcon, TrashIcon, UndoIcon, DownloadIcon } from 'lucide-react'
-
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
+  MoreHorizontal,
+  Star,
+  StarOff,
+  Trash2,
+  Undo2,
+  Download,
+} from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Button } from '@/components/ui/button'
 import { api } from '../../convex/_generated/api';
 import { useMutation, useQuery } from 'convex/react';
 import { useToast } from '@/hooks/use-toast';
-import { Protect, useOrganization, useUser } from '@clerk/nextjs';
+import { useOrganization, useUser } from '@clerk/nextjs';
+import { cn } from '@/lib/utils';
 
 function FileCardActions({
-    isFav,
-    file,
+  isFav,
+  file,
 }: {
-    isFav: boolean;
-    file: Doc<"files">;
+  isFav: boolean;
+  file: Doc<"files">;
 }) {
-    const { toast } = useToast();
-    const Organization = useOrganization();
-    const user = useUser();
-    const moveToTrash = useMutation(api.files.moveToTrash);
-    const permanentlyDeleteFile = useMutation(api.files.permanentlyDeleteFile);
-    const toggleFav = useMutation(api.files.toggleFav);
-    const getFileUrl = useMutation(api.files.getFileUrl);
-    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const restoreFile = useMutation(api.files.restoreFile);
+  const { toast } = useToast();
+  const Organization = useOrganization();
+  const user = useUser();
+  const moveToTrash = useMutation(api.files.moveToTrash);
+  const permanentlyDeleteFile = useMutation(api.files.permanentlyDeleteFile);
+  const toggleFav = useMutation(api.files.toggleFav);
+  const getFileUrl = useMutation(api.files.getFileUrl);
+  const restoreFile = useMutation(api.files.restoreFile);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
-    const currentUser = useQuery(api.users.getMe);
-    const isOwner = currentUser?._id === file.userId;
+  const currentUser = useQuery(api.users.getMe);
+  const isOwner = currentUser?._id === file.userId;
 
-    let orgId: string | undefined = undefined;
-    if (Organization.isLoaded && user.user?.id) {
-        orgId = Organization.organization?.id ?? user.user?.id;
+  let orgId: string | undefined = undefined;
+  if (Organization.isLoaded && user.user?.id) {
+    orgId = Organization.organization?.id ?? user.user?.id;
+  }
+
+  const downloadFile = async () => {
+    try {
+      const fileUrl = await getFileUrl({ fileId: file.fileId });
+      if (!fileUrl) throw new Error("Could not get file URL");
+
+      if (file.type === "image" || file.type === "pdf") {
+        window.open(fileUrl, '_blank');
+        toast({ title: "Opened in new tab" });
+        return;
+      }
+
+      const response = await fetch(fileUrl);
+      if (!response.ok) throw new Error('Failed to fetch file');
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 1000);
+
+      toast({ title: "Downloaded", description: file.name });
+    } catch {
+      toast({ variant: "destructive", title: "Download failed", description: "Please try again." });
     }
+  };
 
-    const downloadFile = async () => {
-        try {
-            const fileUrl = await getFileUrl({ fileId: file.fileId });
-            
-            if (!fileUrl) {
-                throw new Error("Could not get file URL");
-            }
-            
-            // For images and PDFs, directly open the URL
-            if (file.type === "image" || file.type === "pdf") {
-                window.open(fileUrl, '_blank');
-                toast({
-                    title: "Success",
-                    description: "File opened in new tab",
-                });
-                return;
-            }
+  const handleDelete = async () => {
+    try {
+      if (file.shouldDelete) {
+        await permanentlyDeleteFile({ fileId: file._id });
+        toast({ title: "Permanently deleted" });
+      } else {
+        await moveToTrash({ fileId: file._id });
+        toast({ title: "Moved to Trash", description: "You can restore it from Trash." });
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "Action failed. Please try again." });
+    }
+    setIsConfirmOpen(false);
+  };
 
-            // For other file types, trigger download
-            const response = await fetch(fileUrl);
-            if (!response.ok) {
-                throw new Error('Failed to fetch file');
-            }
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="secondary"
+            size="icon"
+            className="h-7 w-7 rounded-lg shadow-sm bg-white/90 hover:bg-white"
+          >
+            <MoreHorizontal className="h-3.5 w-3.5" />
+            <span className="sr-only">File actions</span>
+          </Button>
+        </DropdownMenuTrigger>
 
-            const blob = await response.blob();
-            const downloadUrl = window.URL.createObjectURL(blob);
-            const downloadLink = document.createElement('a');
-            downloadLink.href = downloadUrl;
-            downloadLink.download = file.name;
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
-            
-            // Cleanup
-            setTimeout(() => {
-                window.URL.revokeObjectURL(downloadUrl);
-            }, 1000);
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem onClick={downloadFile} className="gap-2 cursor-pointer">
+            <Download className="w-4 h-4" />
+            Download
+          </DropdownMenuItem>
 
-            toast({
-                title: "Success",
-                description: "File downloaded successfully",
-            });
-        } catch (error) {
-            console.error('Error handling file:', error);
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Failed to handle file",
-            });
-        }
-    };
+          {!file.isGlobal && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => { if (orgId) toggleFav({ fileId: file._id }); }}
+                className="gap-2 cursor-pointer"
+              >
+                {isFav ? (
+                  <><StarOff className="w-4 h-4" /> Remove from Favourites</>
+                ) : (
+                  <><Star className="w-4 h-4" /> Add to Favourites</>
+                )}
+              </DropdownMenuItem>
+            </>
+          )}
 
-    // Helper function to determine content type
-    const getContentType = (extension: string | undefined): string => {
-        switch (extension) {
-            case 'png': return 'image/png';
-            case 'jpg':
-            case 'jpeg': return 'image/jpeg';
-            case 'gif': return 'image/gif';
-            case 'pdf': return 'application/pdf';
-            case 'csv': return 'text/csv';
-            default: return 'application/octet-stream';
-        }
-    };
+          {file.shouldDelete && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={async () => {
+                  try {
+                    await restoreFile({ fileId: file._id });
+                    toast({ title: "Restored", description: "File has been restored." });
+                  } catch {
+                    toast({ variant: "destructive", title: "Restore failed" });
+                  }
+                }}
+                className="gap-2 cursor-pointer"
+              >
+                <Undo2 className="w-4 h-4" />
+                Restore
+              </DropdownMenuItem>
+            </>
+          )}
 
-    const handleDelete = async () => {
-        try {
-            if (file.shouldDelete) {
-                // If file is already in trash, permanently delete it
-                await permanentlyDeleteFile({
-                    fileId: file._id,
-                });
-                toast({
-                    title: "File Deleted",
-                    description: "File has been permanently deleted",
-                });
-            } else {
-                // Move file to trash
-                await moveToTrash({
-                    fileId: file._id,
-                });
-                toast({
-                    title: "Moved to Trash",
-                    description: "File has been moved to trash",
-                });
-            }
-        } catch (error) {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: file.shouldDelete 
-                    ? "Failed to delete file" 
-                    : "Failed to move file to trash",
-            });
-        }
-        setIsConfirmOpen(false);
-    };
+          {isOwner && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setIsConfirmOpen(true)}
+                className={cn("gap-2 cursor-pointer", "text-destructive focus:text-destructive focus:bg-destructive/10")}
+              >
+                <Trash2 className="w-4 h-4" />
+                {file.shouldDelete ? 'Delete Permanently' : 'Move to Trash'}
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-    return (
-        <>
-            <DropdownMenu>
-                <DropdownMenuTrigger>
-                    <MoreVerticalIcon className="h-4 w-4" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                    <DropdownMenuItem onClick={downloadFile}>
-                        <div className="flex gap-2 items-center">
-                            <DownloadIcon className="w-4 h-4" />
-                            Download File
-                        </div>
-                    </DropdownMenuItem>
-
-                    {!file.isGlobal && (
-                        <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                onClick={() => {
-                                    if (!orgId) return;
-                                    toggleFav({
-                                        fileId: file._id,
-                                    });
-                                }}
-                            >
-                                {isFav ? (
-                                    <div className="flex gap-2 items-center">
-                                        <StarIcon className="w-4 h-4" />
-                                        Unfavourite
-                                    </div>
-                                ) : (
-                                    <div className="flex gap-2 items-center">
-                                        <StarHalf className="w-4 h-4" />
-                                        Favourite
-                                    </div>
-                                )}
-                            </DropdownMenuItem>
-                        </>
-                    )}
-
-                    {isOwner && (
-                        <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                onClick={() => setIsConfirmOpen(true)}
-                                className="text-red-600"
-                            >
-                                <div className="flex gap-2 items-center">
-                                    <TrashIcon className="w-4 h-4" />
-                                    {file.shouldDelete ? 'Delete Permanently' : 'Move to Trash'}
-                                </div>
-                            </DropdownMenuItem>
-                        </>
-                    )}
-
-                    {file.shouldDelete && (
-                        <>
-                            <DropdownMenuItem
-                                onClick={async () => {
-                                    try {
-                                        await restoreFile({
-                                            fileId: file._id,
-                                        });
-                                        toast({
-                                            title: "File Restored",
-                                            description: "File has been restored successfully",
-                                        });
-                                    } catch (error) {
-                                        toast({
-                                            variant: "destructive",
-                                            title: "Error",
-                                            description: "Failed to restore file",
-                                        });
-                                    }
-                                }}
-                            >
-                                <div className="flex gap-2 items-center">
-                                    <UndoIcon className="w-4 h-4" />
-                                    Restore
-                                </div>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                        </>
-                    )}
-                </DropdownMenuContent>
-            </DropdownMenu>
-
-            <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            {file.shouldDelete 
-                                ? "This action cannot be undone. This will permanently delete your file."
-                                : "This will move the file to trash. You can restore it later."}
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete}>
-                            {file.shouldDelete ? 'Delete Permanently' : 'Move to Trash'}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </>
-    );
+      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {file.shouldDelete ? 'Delete permanently?' : 'Move to Trash?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {file.shouldDelete
+                ? 'This action is irreversible. The file will be gone forever.'
+                : 'The file will be moved to Trash. You can restore it later.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className={file.shouldDelete ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground' : ''}
+            >
+              {file.shouldDelete ? 'Delete Permanently' : 'Move to Trash'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
 }
 
 export default FileCardActions;
