@@ -33,10 +33,8 @@ const formSchema = z.object({
 
 export function UploadButton({ isGlobal }: { isGlobal?: boolean }) {
     const { isSignedIn, user } = useUser();
-    
-    if (!isSignedIn) {
-        return null;
-    }
+
+
 
     const organization = useOrganization();
     const router = useRouter();
@@ -89,7 +87,7 @@ export function UploadButton({ isGlobal }: { isGlobal?: boolean }) {
             });
 
             const { storageId } = await result.json();
-            
+
             try {
                 const fileKey = await createGlobalFile({
                     name: values.title,
@@ -152,6 +150,10 @@ export function UploadButton({ isGlobal }: { isGlobal?: boolean }) {
     }
 
     const createFile = useMutation(api.files.createFile);
+
+    if (!isSignedIn) {
+        return null;
+    }
 
     return (
         <Dialog open={isFileDialogOpen} onOpenChange={(isOpen) => {

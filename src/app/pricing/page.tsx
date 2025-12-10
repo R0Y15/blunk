@@ -11,7 +11,7 @@ const page = () => {
             </div>
 
             <div className="grid md:grid-cols-3 gap-10 mx-auto max-w-screen-lg mt-12">
-                {pricing.map((item) => <PricingCard plan={item} />)}
+                {pricing.map((item, idx) => <PricingCard plan={item} key={idx} />)}
             </div>
         </div>
     )
